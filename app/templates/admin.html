@@ -9,6 +9,7 @@
     <label class="field"><span>每人每週上限（GPU·小時 = 小時 × 張數）</span><input type="number" name="max_gpu_hours_per_week" min="1" step="1" required></label>
     <label class="field"><span>最多可提前幾天預約</span><input type="number" name="max_days_ahead" min="1" step="1" required></label>
     <label class="field"><span>單次最多幾張 GPU（0 = 不限）</span><input type="number" name="max_gpus_per_booking" min="0" step="1" required></label>
+    <label class="field"><span>本地顯卡記憶體（GB）：預估用量在這以下的預約，要勾「本地跑不動」並寫原因（0 = 不檢查）</span><input type="number" name="local_gpu_mem_gb" min="0" step="0.5" required></label>
     <label class="field"><span><input type="checkbox" name="flag_unbooked_on_free_gpu"> 在沒人預約的卡上跑程式也標示「未預約」</span></label>
     <button class="primary" type="submit">儲存規則</button>
   </form>

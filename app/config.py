@@ -23,6 +23,9 @@ class Rules:
     max_days_ahead: int = 14
     max_gpus_per_booking: int = 0  # 0 = no limit
     flag_unbooked_on_free_gpu: bool = True
+    # Jobs that fit in this much GPU memory should run on people's own machines
+    # (e.g. a local RTX 3050 6GB). Booking them needs a stated reason. 0 = off.
+    local_gpu_mem_gb: float = 6
 
     @classmethod
     def keys(cls) -> list[str]:

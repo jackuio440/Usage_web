@@ -117,8 +117,8 @@ input, textarea, select {
   border-radius: 6px; padding: 6px 8px; max-width: 100%;
 }
 textarea { width: 100%; min-height: 64px; }
-label.field { display: block; margin-bottom: 12px; }
-label.field > span { display: block; font-size: .85rem; color: var(--ink-2); margin-bottom: 4px; }
+.field { display: block; margin-bottom: 12px; }
+.field > span { display: block; font-size: .85rem; color: var(--ink-2); margin-bottom: 4px; }
 
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--grid); vertical-align: top; }
@@ -134,6 +134,7 @@ th { font-size: .8rem; color: var(--muted); font-weight: 600; }
 .notice { padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); margin-bottom: 12px; }
 .notice.announce { border-left: 4px solid var(--accent); }
 .notice.maint { border-left: 4px solid var(--critical); }
+.notice.warn { border-left: 4px solid var(--warning); }
 .notice.error { border-left: 4px solid var(--critical); color: var(--critical); }
 
 #toast {

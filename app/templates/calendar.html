@@ -40,7 +40,12 @@
       <label class="field"><span>開始</span><input type="datetime-local" id="f-start" step="1800" required></label>
       <label class="field"><span>結束</span><input type="datetime-local" id="f-end" step="1800" required></label>
     </div>
-    <div class="field"><span class="small muted">GPU（劃線 = 該時段已被預約）</span><div class="gpu-picks" id="f-gpus"></div></div>
+    <div class="field"><span class="small muted">GPU（可同時選兩張；劃線 = 該時段已被預約）</span><div class="gpu-picks" id="f-gpus"></div></div>
+    <label class="field" id="mem-field"><span>預估需要的 GPU 記憶體（每張卡，GB）</span><input type="number" id="f-mem" min="0.5" max="1024" step="0.5" placeholder="例如 12" inputmode="decimal"></label>
+    <div class="notice warn small" id="local-hint" hidden>
+      預估在 <b id="local-limit"></b> GB 以內，<b>本地顯卡應該跑得動</b>，請先在自己的電腦上跑，把伺服器留給需要大記憶體的實驗。
+      <label style="display:flex;gap:6px;align-items:center;margin-top:8px"><input type="checkbox" id="f-local"> 本地跑不動（請在下方「用途」寫原因，例如太慢、要跑很多組）</label>
+    </div>
     <label class="field"><span>用途 / 備註</span><textarea id="f-purpose" maxlength="500" placeholder="例如：訓練 ResNet 實驗、論文實驗"></textarea></label>
     <div class="notice error small" id="dlg-error" hidden></div>
     <div class="row">

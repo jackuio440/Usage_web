@@ -6,6 +6,7 @@ import json
 from datetime import datetime, timezone
 
 from sqlalchemy import (
+    Boolean,
     DateTime,
     Float,
     Integer,
@@ -53,6 +54,8 @@ class Booking(Base):
     start: Mapped[datetime] = mapped_column(DateTime, index=True)
     end: Mapped[datetime] = mapped_column(DateTime, index=True)
     purpose: Mapped[str] = mapped_column(Text, default="")
+    mem_gb: Mapped[float | None] = mapped_column(Float, nullable=True)  # estimated GPU memory per GPU
+    local_insufficient: Mapped[bool] = mapped_column(Boolean, default=False)  # "my local GPU can't run it"
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     @property
@@ -67,6 +70,8 @@ class Booking(Base):
             "start": iso(self.start),
             "end": iso(self.end),
             "purpose": self.purpose,
+            "mem_gb": self.mem_gb,
+            "local_insufficient": self.local_insufficient,
         }
 
 
@@ -158,7 +163,18 @@ class Database:
             cur.close()
 
         Base.metadata.create_all(self.engine)
+        self._add_missing_columns()
         self.Session = sessionmaker(self.engine, expire_on_commit=False)
+
+    def _add_missing_columns(self) -> None:
+        """Tiny migration: add columns introduced after a database was created."""
+        added = {"bookings": {"mem_gb": "FLOAT", "local_insufficient": "BOOLEAN NOT NULL DEFAULT 0"}}
+        with self.engine.begin() as conn:
+            for table, columns in added.items():
+                have = {row[1] for row in conn.exec_driver_sql(f"PRAGMA table_info({table})")}
+                for name, ddl in columns.items():
+                    if name not in have:
+                        conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}")
 
     def session(self) -> Session:
         return self.Session()

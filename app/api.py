@@ -22,6 +22,8 @@ class BookingIn(BaseModel):
     start: AwareDatetime
     end: AwareDatetime
     purpose: str = Field("", max_length=500)
+    mem_gb: float | None = Field(None, gt=0, le=1024)
+    local_insufficient: bool = False
 
 
 def parse_query_dt(value: str, st: AppState) -> datetime:
@@ -102,6 +104,9 @@ def _validate(st: AppState, s, user: User, body: BookingIn, existing: Booking | 
             start=to_db(body.start),
             end=to_db(body.end),
             existing=existing,
+            mem_gb=body.mem_gb,
+            local_insufficient=body.local_insufficient,
+            purpose=body.purpose,
         )
     except bk.BookingError as e:
         raise HTTPException(409, str(e)) from e
@@ -125,6 +130,8 @@ def create_booking(body: BookingIn, user: User = Depends(current_user), st: AppS
             start=to_db(body.start),
             end=to_db(body.end),
             purpose=body.purpose.strip(),
+            mem_gb=body.mem_gb,
+            local_insufficient=body.local_insufficient,
         )
         s.add(b)
         s.flush()
@@ -148,6 +155,7 @@ def update_booking(booking_id: int, body: BookingIn, user: User = Depends(curren
         b = _get_owned(s, booking_id, user)
         _validate(st, s, user, body, existing=b)
         b.gpus, b.start, b.end, b.purpose = _gpus_str(body.gpus), to_db(body.start), to_db(body.end), body.purpose.strip()
+        b.mem_gb, b.local_insufficient = body.mem_gb, body.local_insufficient
         st.db.audit(s, user.username, "update_booking", f"#{b.id} ({b.username}) GPU {b.gpus} {_span(st, b.start, b.end)}")
         s.commit()
         return b.to_dict()
@@ -211,7 +219,7 @@ def stats(weeks: int = Query(4, ge=1, le=26), user: User = Depends(current_user)
             rows: dict[str, dict] = {}
 
             def row(name: str) -> dict:
-                return rows.setdefault(name, {"username": name, "booked": 0.0, "used": 0.0, "unbooked": 0.0})
+                return rows.setdefault(name, {"username": name, "booked": 0.0, "used": 0.0, "unbooked": 0.0, "peak_mem_gb": 0.0})
 
             for b in bk.overlapping_bookings(s, ws, we):
                 row(b.username)["booked"] += bk.overlap_hours(b.start, b.end, ws, we) * len(b.gpu_list)
@@ -219,9 +227,10 @@ def stats(weeks: int = Query(4, ge=1, le=26), user: User = Depends(current_user)
                 r = row(u.username)
                 r["used"] += u.minutes / 60
                 r["unbooked"] += u.unbooked_minutes / 60
+                r["peak_mem_gb"] = max(r["peak_mem_gb"], u.max_mem_mb / 1024)
             users = sorted(rows.values(), key=lambda r: -(r["booked"] + r["used"]))
             for r in users:
-                for k in ("booked", "used", "unbooked"):
+                for k in ("booked", "used", "unbooked", "peak_mem_gb"):
                     r[k] = round(r[k], 1)
             result.append({"week_start": iso(ws), "users": users})
     return {"weeks": result}

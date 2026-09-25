@@ -74,6 +74,9 @@ def validate(
     start: datetime,
     end: datetime,
     existing: Booking | None = None,
+    mem_gb: float | None = None,
+    local_insufficient: bool = False,
+    purpose: str = "",
     now: datetime | None = None,
 ) -> None:
     """Raise BookingError with a user-facing message if the booking is not allowed.
@@ -108,6 +111,18 @@ def validate(
             raise BookingError(f"最多只能預約 {rules.max_days_ahead} 天內的時段")
         if rules.max_gpus_per_booking and len(gpus) > rules.max_gpus_per_booking:
             raise BookingError(f"單次預約最多 {rules.max_gpus_per_booking} 張 GPU")
+        limit = rules.local_gpu_mem_gb
+        mem_changed = existing is None or mem_gb != existing.mem_gb or local_insufficient != existing.local_insufficient
+        if limit > 0 and mem_changed:
+            if mem_gb is None:
+                raise BookingError("請填寫預估需要的 GPU 記憶體（GB）")
+            if mem_gb <= limit and not local_insufficient:
+                raise BookingError(
+                    f"預估只需要 {mem_gb:g} GB，本地顯卡（{limit:g} GB）應該跑得動，請先在自己的電腦上跑；"
+                    f"如果本地真的跑不動，請勾選「本地跑不動」並在用途說明原因"
+                )
+            if mem_gb <= limit and not purpose.strip():
+                raise BookingError("勾選「本地跑不動」時，請在用途說明原因（例如：太慢、要跑很多組參數）")
         exclude = existing.id if existing else None
         for ws, we in weeks_touched(start, end, tz):
             used = gpu_hours_in(s, user.username, ws, we, exclude_id=exclude)

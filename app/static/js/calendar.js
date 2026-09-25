@@ -61,7 +61,7 @@
         if (!b.gpus.includes(g)) continue;
         const l = Math.max(0, xOf(b.start)), r = Math.min(width, xOf(b.end));
         if (r <= l) continue;
-        const title = `${b.username}｜${fmtRange(b.start, b.end)}｜${gpuLabel(b.gpus)}${b.purpose ? "｜" + b.purpose : ""}`;
+        const title = `${b.username}｜${fmtRange(b.start, b.end)}｜${gpuLabel(b.gpus)}${b.mem_gb ? `｜需 ${b.mem_gb} GB` : ""}${b.purpose ? "｜" + b.purpose : ""}`;
         bars += `<div class="tl-bar ${isMine(b) ? "mine" : ""}" data-id="${b.id}" style="left:${l}px;width:${Math.max(r - l, 3)}px" title="${esc(title)}">${esc(b.username)}</div>`;
       }
       rows += `<div class="tl-row"><div class="tl-label">GPU ${g}</div><div class="tl-lane" data-gpu="${g}" style="width:${width}px;${grid}">${bars}${nowLine}</div></div>`;
@@ -166,7 +166,7 @@
   async function moved(info) {
     const b = info.event.extendedProps.booking;
     try {
-      await api("PATCH", `/api/bookings/${b.id}`, { gpus: b.gpus, start: info.event.start.toISOString(), end: info.event.end.toISOString(), purpose: b.purpose });
+      await api("PATCH", `/api/bookings/${b.id}`, { gpus: b.gpus, start: info.event.start.toISOString(), end: info.event.end.toISOString(), purpose: b.purpose, mem_gb: b.mem_gb, local_insufficient: b.local_insufficient });
       toast("已更新預約");
       reloadAll();
     } catch (e) { info.revert(); toast(e.message, true); }
@@ -202,12 +202,23 @@
     title: document.getElementById("dlg-title"),
     owner: document.getElementById("dlg-owner"),
     save: document.getElementById("dlg-save"),
+    mem: document.getElementById("f-mem"),
+    local: document.getElementById("f-local"),
+    localHint: document.getElementById("local-hint"),
   };
+  const localLimit = () => (me && me.rules.local_gpu_mem_gb) || 0;
+
+  function updateLocalHint() {
+    const limit = localLimit(), mem = Number(f.mem.value);
+    document.getElementById("local-limit").textContent = limit;
+    f.localHint.hidden = !(limit > 0 && mem > 0 && mem <= limit);
+  }
+  f.mem.addEventListener("input", updateLocalHint);
   let editing = null;
 
   function openBooking(b) {
     if (!canEdit(b)) {
-      toast(`${b.username}：${fmtRange(b.start, b.end)}，${gpuLabel(b.gpus)}${b.purpose ? "（" + b.purpose + "）" : ""}`);
+      toast(`${b.username}：${fmtRange(b.start, b.end)}，${gpuLabel(b.gpus)}${b.mem_gb ? `，需 ${b.mem_gb} GB` : ""}${b.purpose ? "（" + b.purpose + "）" : ""}`);
       return;
     }
     openDialog({ booking: b, start: new Date(b.start), end: new Date(b.end), gpus: b.gpus, purpose: b.purpose });
@@ -223,6 +234,10 @@
     f.end.value = toInput(end);
     f.start.disabled = !!started;
     f.purpose.value = purpose;
+    f.mem.value = booking && booking.mem_gb != null ? booking.mem_gb : "";
+    f.mem.required = localLimit() > 0 && !APP.isAdmin;
+    f.local.checked = !!(booking && booking.local_insufficient);
+    updateLocalHint();
     f.error.hidden = true;
     f.del.hidden = !booking;
     f.del.textContent = started ? "提前結束" : "取消預約";
@@ -268,6 +283,8 @@
       start: s.toISOString(),
       end: e.toISOString(),
       purpose: f.purpose.value,
+      mem_gb: f.mem.value ? Number(f.mem.value) : null,
+      local_insufficient: !f.localHint.hidden && f.local.checked,
     };
     f.save.disabled = true;
     try {

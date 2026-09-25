@@ -20,6 +20,7 @@
         max_days_ahead: Number(el.max_days_ahead.value),
         max_gpus_per_booking: Number(el.max_gpus_per_booking.value),
         flag_unbooked_on_free_gpu: el.flag_unbooked_on_free_gpu.checked,
+        local_gpu_mem_gb: Number(el.local_gpu_mem_gb.value),
       });
       toast("規則已儲存");
       loadAudit();

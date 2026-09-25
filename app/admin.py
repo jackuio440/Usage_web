@@ -20,6 +20,7 @@ class RulesIn(BaseModel):
     max_days_ahead: int = Field(ge=1, le=365)
     max_gpus_per_booking: int = Field(ge=0, le=64)
     flag_unbooked_on_free_gpu: bool
+    local_gpu_mem_gb: float = Field(ge=0, le=1024)
 
 
 class BlackoutIn(BaseModel):

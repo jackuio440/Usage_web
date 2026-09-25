@@ -44,8 +44,10 @@ def admin(app):
     return login(app, "admin1")
 
 
-def book(c, gpus, start, end, purpose=""):
-    return c.post("/api/bookings", json={"gpus": gpus, "start": start, "end": end, "purpose": purpose}, headers=H)
+def book(c, gpus, start, end, purpose="", mem_gb=20, local_insufficient=False):
+    body = {"gpus": gpus, "start": start, "end": end, "purpose": purpose,
+            "mem_gb": mem_gb, "local_insufficient": local_insufficient}
+    return c.post("/api/bookings", json=body, headers=H)
 
 
 def test_requires_login(app):
@@ -105,7 +107,7 @@ def test_admin_exempt_from_quota_but_not_conflicts(admin, alice):
 
 def test_edit_and_delete_permissions(alice, bob, admin):
     b = book(alice, [0], at(5), at(6)).json()
-    body = {"gpus": [1], "start": at(5), "end": at(7), "purpose": "x"}
+    body = {"gpus": [1], "start": at(5), "end": at(7), "purpose": "x", "mem_gb": 20}
     assert bob.patch(f"/api/bookings/{b['id']}", json=body, headers=H).status_code == 403
     r = alice.patch(f"/api/bookings/{b['id']}", json=body, headers=H)
     assert r.status_code == 200 and r.json()["gpus"] == [1]
@@ -115,13 +117,52 @@ def test_edit_and_delete_permissions(alice, bob, admin):
 
 def test_running_booking_only_end_can_change(alice):
     b = book(alice, [0], at(-0.5), at(2)).json()
-    moved = {"gpus": [0], "start": at(-0.25), "end": at(2), "purpose": ""}
+    moved = {"gpus": [0], "start": at(-0.25), "end": at(2), "purpose": "", "mem_gb": 20}
     assert alice.patch(f"/api/bookings/{b['id']}", json=moved, headers=H).status_code == 409
-    extended = {"gpus": [0], "start": b["start"], "end": at(3), "purpose": ""}
+    extended = {"gpus": [0], "start": b["start"], "end": at(3), "purpose": "", "mem_gb": 20}
     assert alice.patch(f"/api/bookings/{b['id']}", json=extended, headers=H).status_code == 200
     r = alice.delete(f"/api/bookings/{b['id']}", headers=H).json()
     assert r["ended"] is True
     assert datetime.fromisoformat(r["booking"]["end"]) <= datetime.now(timezone.utc)
+
+
+def test_small_jobs_should_run_locally(alice, admin):
+    # 6 GB local GPU by default
+    r = book(alice, [0], at(1), at(2), mem_gb=None)
+    assert r.status_code == 409 and "記憶體" in r.json()["detail"]
+    r = book(alice, [0], at(1), at(2), mem_gb=4)
+    assert r.status_code == 409 and "本地" in r.json()["detail"]
+    # ticking "local can't run it" requires a reason
+    assert book(alice, [0], at(1), at(2), mem_gb=4, local_insufficient=True).status_code == 409
+    r = book(alice, [0], at(1), at(2), purpose="本地太慢，要跑 20 組參數", mem_gb=4, local_insufficient=True)
+    assert r.status_code == 200 and r.json()["mem_gb"] == 4
+    # bigger jobs and both GPUs at once are fine
+    assert book(alice, [0, 1], at(3), at(5), mem_gb=20).status_code == 200
+    # admins can switch the check off
+    rules = admin.get("/api/admin/rules").json()["rules"] | {"local_gpu_mem_gb": 0}
+    assert admin.put("/api/admin/rules", json=rules, headers=H).status_code == 200
+    assert book(alice, [0], at(6), at(7), mem_gb=None).status_code == 200
+
+
+def test_moving_booking_keeps_its_memory_answer(alice):
+    b = book(alice, [0], at(1), at(2), purpose="本地太慢", mem_gb=4, local_insufficient=True).json()
+    body = {"gpus": [0], "start": at(2), "end": at(3), "purpose": b["purpose"],
+            "mem_gb": b["mem_gb"], "local_insufficient": b["local_insufficient"]}
+    assert alice.patch(f"/api/bookings/{b['id']}", json=body, headers=H).status_code == 200
+
+
+def test_old_database_gets_new_columns(tmp_path):
+    import sqlite3
+
+    from app.db import Database
+
+    con = sqlite3.connect(tmp_path / "usage.db")
+    con.execute("CREATE TABLE bookings (id INTEGER PRIMARY KEY, username VARCHAR(64), gpus VARCHAR(128), "
+                "start DATETIME, \"end\" DATETIME, purpose TEXT, created_at DATETIME)")
+    con.commit(); con.close()
+    Database(Config(data_dir=tmp_path, secret_key="x"))
+    cols = {r[1] for r in sqlite3.connect(tmp_path / "usage.db").execute("PRAGMA table_info(bookings)")}
+    assert {"mem_gb", "local_insufficient"} <= cols
 
 
 def test_blackout_blocks_bookings(admin, alice):
@@ -135,7 +176,7 @@ def test_blackout_blocks_bookings(admin, alice):
 
 def test_admin_rules_update(admin, alice):
     rules = {"max_hours_per_booking": 1, "max_gpu_hours_per_week": 100, "max_days_ahead": 7,
-             "max_gpus_per_booking": 1, "flag_unbooked_on_free_gpu": False}
+             "max_gpus_per_booking": 1, "flag_unbooked_on_free_gpu": False, "local_gpu_mem_gb": 6}
     assert admin.put("/api/admin/rules", json=rules, headers=H).status_code == 200
     assert book(alice, [0], at(1), at(3)).status_code == 409  # > 1h
     assert book(alice, [0, 1], at(1), at(2)).status_code == 409  # > 1 GPU
@@ -160,6 +201,7 @@ def test_sampler_and_stats(app, alice):
     assert users["alice"]["booked"] > 0
     # mock GPU 2 is used by "carol" without a booking
     assert users["carol"]["unbooked"] > 0
+    assert users["alice"]["peak_mem_gb"] > 17  # mock process uses 18000 MB
 
 
 def test_week_boundaries_use_local_time():

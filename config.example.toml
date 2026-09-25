@@ -35,3 +35,6 @@ max_gpu_hours_per_week = 72    # 每人每週上限，GPU·小時 = 小時 × �
 max_days_ahead = 14            # 最多可以提前幾天預約
 max_gpus_per_booking = 0       # 單次最多幾張，0 = 不限
 flag_unbooked_on_free_gpu = true  # 在沒人預約的卡上跑程式，也標示「未預約」
+# 大家本地端的顯卡記憶體（例如 RTX 3050 = 6 GB）。預估用量在這以下的預約，
+# 要勾「本地跑不動」並寫原因，鼓勵小實驗回本地跑。0 = 不檢查
+local_gpu_mem_gb = 6
