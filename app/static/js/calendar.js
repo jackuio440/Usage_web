@@ -20,8 +20,8 @@
     me = await api("GET", "/api/me");
     const r = me.rules;
     document.getElementById("quota").textContent = APP.isAdmin
-      ? `本週已預約 ${me.week_gpu_hours} GPU·小時（管理員不受配額限制）`
-      : `本週已預約 ${me.week_gpu_hours} / ${r.max_gpu_hours_per_week} GPU·小時 · 單次最長 ${r.max_hours_per_booking} 小時 · 可預約 ${r.max_days_ahead} 天內`;
+      ? T("cal.quota_admin", { used: me.week_gpu_hours })
+      : T("cal.quota", { used: me.week_gpu_hours, max: r.max_gpu_hours_per_week, per: r.max_hours_per_booking, days: r.max_days_ahead });
   }
 
   // ---------------- GPU timeline ----------------
@@ -55,13 +55,13 @@
       let bars = "";
       for (const bo of tlData.blackouts) {
         const l = Math.max(0, xOf(bo.start)), r = Math.min(width, xOf(bo.end));
-        if (r > l) bars += `<div class="tl-bar maint" style="left:${l}px;width:${r - l}px" title="維護：${esc(bo.reason)}">${r - l > 60 ? "維護" : ""}</div>`;
+        if (r > l) bars += `<div class="tl-bar maint" style="left:${l}px;width:${r - l}px" title="${esc(T("cal.maint_title", { reason: bo.reason }))}">${r - l > 60 ? T("cal.maint_short") : ""}</div>`;
       }
       for (const b of tlData.bookings) {
         if (!b.gpus.includes(g)) continue;
         const l = Math.max(0, xOf(b.start)), r = Math.min(width, xOf(b.end));
         if (r <= l) continue;
-        const title = `${b.username}｜${fmtRange(b.start, b.end)}｜${gpuLabel(b.gpus)}${b.mem_gb ? `｜需 ${b.mem_gb} GB` : ""}${b.purpose ? "｜" + b.purpose : ""}`;
+        const title = [b.username, fmtRange(b.start, b.end), gpuLabel(b.gpus), b.mem_gb ? T("cal.needs_mem", { gb: b.mem_gb }) : "", b.purpose].filter(Boolean).join(" | ");
         bars += `<div class="tl-bar ${isMine(b) ? "mine" : ""}" data-id="${b.id}" style="left:${l}px;width:${Math.max(r - l, 3)}px" title="${esc(title)}">${esc(b.username)}</div>`;
       }
       rows += `<div class="tl-row"><div class="tl-label">GPU ${g}</div><div class="tl-lane" data-gpu="${g}" style="width:${width}px;${grid}">${bars}${nowLine}</div></div>`;
@@ -106,7 +106,7 @@
     for (let g = 0; g < me.gpu_count; g++) {
       html += `<label><input type="checkbox" value="${g}" ${gpuFilter.has(g) ? "checked" : ""}> GPU ${g}</label>`;
     }
-    box.innerHTML = html + `<span class="small muted" style="align-self:center">不勾 = 全部</span>`;
+    box.innerHTML = html + `<span class="small muted" style="align-self:center">${T("cal.filter_all")}</span>`;
     box.onchange = () => {
       gpuFilter = new Set([...box.querySelectorAll("input:checked")].map((i) => Number(i.value)));
       calendar && calendar.refetchEvents();
@@ -115,7 +115,7 @@
 
   function initCalendar() {
     calendar = new FullCalendar.Calendar(document.getElementById("calendar"), {
-      locale: "zh-tw",
+      locale: U.ZH ? "zh-tw" : "en",
       initialView: window.innerWidth < 700 ? "timeGridDay" : "timeGridWeek",
       firstDay: 1,
       headerToolbar: { left: "prev,next today", center: "title", right: "timeGridWeek,timeGridDay,listWeek" },
@@ -144,7 +144,7 @@
               extendedProps: { booking: b },
             }));
           for (const bo of d.blackouts) {
-            evs.push({ start: bo.start, end: bo.end, display: "background", classNames: ["maint-bg"], title: "維護：" + bo.reason });
+            evs.push({ start: bo.start, end: bo.end, display: "background", classNames: ["maint-bg"], title: T("cal.maint_title", { reason: bo.reason }) });
           }
           ok(evs);
         } catch (e) { fail(e); toast(e.message, true); }
@@ -152,7 +152,7 @@
       select: (info) => {
         calendar.unselect();
         let start = info.start;
-        if (info.end <= new Date()) return toast("不能預約過去的時間", true);
+        if (info.end <= new Date()) return toast(T("cal.past"), true);
         if (start < new Date()) start = nextHalfHour();
         openDialog({ start, end: info.end, gpus: gpuFilter.size === 1 ? [...gpuFilter] : [] });
       },
@@ -167,7 +167,7 @@
     const b = info.event.extendedProps.booking;
     try {
       await api("PATCH", `/api/bookings/${b.id}`, { gpus: b.gpus, start: info.event.start.toISOString(), end: info.event.end.toISOString(), purpose: b.purpose, mem_gb: b.mem_gb });
-      toast("已更新預約");
+      toast(T("cal.updated"));
       reloadAll();
     } catch (e) { info.revert(); toast(e.message, true); }
   }
@@ -209,7 +209,7 @@
 
   function updateLocalHint() {
     const limit = localLimit(), mem = Number(f.mem.value);
-    document.getElementById("local-limit").textContent = limit;
+    f.localHint.textContent = T("cal.dlg_local_hint", { limit });
     f.localHint.hidden = !(limit > 0 && mem > 0 && mem <= limit);
   }
   f.mem.addEventListener("input", updateLocalHint);
@@ -217,7 +217,7 @@
 
   function openBooking(b) {
     if (!canEdit(b)) {
-      toast(`${b.username}：${fmtRange(b.start, b.end)}，${gpuLabel(b.gpus)}${b.mem_gb ? `，需 ${b.mem_gb} GB` : ""}${b.purpose ? "（" + b.purpose + "）" : ""}`);
+      toast([b.username, fmtRange(b.start, b.end), gpuLabel(b.gpus), b.mem_gb ? T("cal.needs_mem", { gb: b.mem_gb }) : "", b.purpose].filter(Boolean).join(" | "));
       return;
     }
     openDialog({ booking: b, start: new Date(b.start), end: new Date(b.end), gpus: b.gpus, purpose: b.purpose });
@@ -226,9 +226,9 @@
   function openDialog({ booking = null, start, end, gpus = [], purpose = "" }) {
     editing = booking;
     const started = booking && new Date(booking.start) <= new Date();
-    f.title.textContent = booking ? "修改預約" : "新增預約";
+    f.title.textContent = T(booking ? "cal.dlg_edit" : "cal.dlg_new");
     f.owner.hidden = !(booking && !isMine(booking));
-    f.owner.textContent = booking ? `預約者：${booking.username}（管理員修改）` : "";
+    f.owner.textContent = booking ? T("cal.dlg_owner", { user: booking.username }) : "";
     f.start.value = toInput(start);
     f.end.value = toInput(end);
     f.start.disabled = !!started;
@@ -238,7 +238,7 @@
     updateLocalHint();
     f.error.hidden = true;
     f.del.hidden = !booking;
-    f.del.textContent = started ? "提前結束" : "取消預約";
+    f.del.textContent = T(started ? "cal.end_now" : "cal.cancel_booking");
     let html = "";
     for (let g = 0; g < me.gpu_count; g++) {
       html += `<label data-gpu="${g}"><input type="checkbox" value="${g}" ${gpus.includes(g) ? "checked" : ""} ${started ? "disabled" : ""}> GPU ${g}</label>`;
@@ -264,7 +264,7 @@
         f.gpus.querySelectorAll("label").forEach((l) => {
           const g = Number(l.dataset.gpu);
           l.classList.toggle("busy", busy.has(g));
-          l.title = busy.has(g) ? `已被 ${busy.get(g)} 預約` : "";
+          l.title = busy.has(g) ? T("cal.busy_by", { user: busy.get(g) }) : "";
         });
       } catch (err) { /* informational only */ }
     }, 200);
@@ -288,7 +288,7 @@
       if (editing) await api("PATCH", `/api/bookings/${editing.id}`, body);
       else await api("POST", "/api/bookings", body);
       dlg.close();
-      toast(`已${editing ? "更新" : "預約"}：${gpuLabel(body.gpus)}，${fmtRange(s, e)}（${hours(s, e).toFixed(1)} 小時）`);
+      toast(T(editing ? "cal.saved_edit" : "cal.saved_new", { gpus: gpuLabel(body.gpus), range: fmtRange(s, e), hours: hours(s, e).toFixed(1) }));
       reloadAll();
     } catch (err) {
       f.error.textContent = err.message;
@@ -298,11 +298,11 @@
 
   f.del.onclick = async () => {
     const started = new Date(editing.start) <= new Date();
-    if (!confirm(started ? "確定要現在結束這個預約？" : "確定要取消這個預約？")) return;
+    if (!confirm(T(started ? "cal.confirm_end" : "cal.confirm_cancel"))) return;
     try {
       await api("DELETE", `/api/bookings/${editing.id}`);
       dlg.close();
-      toast(started ? "已提前結束" : "已取消預約");
+      toast(T(started ? "cal.ended" : "cal.cancelled"));
       reloadAll();
     } catch (err) { f.error.textContent = err.message; f.error.hidden = false; }
   };

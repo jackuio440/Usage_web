@@ -8,7 +8,7 @@ host = "127.0.0.1"
 port = 8080
 data_dir = "/var/lib/usage-web"       # 資料庫與 session 金鑰存放位置
 timezone = "Asia/Taipei"
-site_title = "GPU 伺服器使用登記"
+# site_title = "GPU 伺服器使用登記"   # 網站名稱；不設定 = 依語言顯示預設名稱
 # 有加 HTTPS（反向代理）時才設成 true
 cookie_secure = false
 

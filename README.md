@@ -12,7 +12,11 @@
 
 自動檢查：同一張 GPU 不能重複預約、不能預約維護時段、不能超過配額；儀表板會把「沒預約就在用」標黃、「用了別人預約的卡」標紅。
 
+**中文 / English**：每頁右上角可以切換語言，預設跟著瀏覽器語言。
+
 **小實驗回本地跑**：預約時要填「預估需要的 GPU 記憶體」。如果在本地顯卡記憶體以內（預設 6 GB，例如 RTX 3050），會提醒可以先在自己電腦上跑（只是提醒，仍可直接預約）。門檻可在管理頁面調整（0 = 關閉）。使用統計也會列出每個人實際的最高顯存用量。
+
+> **English speakers:** see [For lab members (English)](#for-lab-members-english) at the bottom. The website itself has an English version (toggle in the top-right corner).
 
 ---
 
@@ -149,3 +153,37 @@ app/
   templates/   頁面                  static/     CSS、JS、FullCalendar（已內含，不需連外網）
 deploy/        install.sh、systemd 服務、備份腳本
 ```
+
+---
+
+## For lab members (English)
+
+The booking website runs on the GPU server. Log in with **your Linux account on the server** (the same username and password you use for SSH). Use the **English / 中文** button in the top-right corner to switch languages.
+
+### Connecting
+
+Unless the admins tell you a direct address, open the site through an SSH tunnel:
+
+```bash
+ssh -N -L 8080:127.0.0.1:8080 your-username@server-address
+```
+
+Keep that window open and browse to **http://localhost:8080**.
+
+- To have the tunnel whenever you SSH in, add this to `~/.ssh/config`, then just run `ssh gpu`:
+  ```
+  Host gpu
+      HostName server-address
+      User your-username
+      LocalForward 8080 127.0.0.1:8080
+  ```
+- **VS Code Remote-SSH:** after connecting, open the **Ports** panel, click **Forward a Port** and enter `8080`.
+- Through a jump host: `ssh -N -J you@jump-host -L 8080:127.0.0.1:8080 you@server-address`
+
+### How booking works
+
+- **Schedule** page: click an empty slot on a GPU's row (timeline) or drag over a time range (week view). You can pick one or both GPUs.
+- Enter the **estimated GPU memory** your job needs. If it fits on a local GPU (6 GB, e.g. an RTX 3050), you'll see a reminder to run it on your own machine instead. It's only a reminder, and you can still book.
+- Nobody can book a GPU that is already booked for that time. There are limits per booking and per week; see **My bookings**.
+- Click your own booking to change it, cancel it, or end it early.
+- **Live status** shows what is running on each GPU. Processes running without a booking are marked yellow. Processes on a GPU someone else booked are marked red.

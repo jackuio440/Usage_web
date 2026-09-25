@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from pydantic import AwareDatetime, BaseModel, Field
 from sqlalchemy import select
 
 from . import bookings as bk
 from .auth import User, require_admin
+from .i18n import AppError
 from .db import Announcement, AuditLog, Blackout, to_db
 from .state import AppState, get_state
 
@@ -57,7 +58,7 @@ def list_blackouts(user: User = Depends(require_admin), st: AppState = Depends(g
 def create_blackout(body: BlackoutIn, user: User = Depends(require_admin), st: AppState = Depends(get_state)):
     start, end = to_db(body.start), to_db(body.end)
     if end <= start:
-        raise HTTPException(400, "結束時間必須晚於開始時間")
+        raise AppError("err.end_before_start", 400)
     with bk.write_lock, st.db.session() as s:
         b = Blackout(start=start, end=end, reason=body.reason.strip(), created_by=user.username)
         s.add(b)
@@ -74,7 +75,7 @@ def delete_blackout(blackout_id: int, user: User = Depends(require_admin), st: A
     with st.db.session() as s:
         b = s.get(Blackout, blackout_id)
         if b is None:
-            raise HTTPException(404, "找不到維護時段")
+            raise AppError("err.blackout_not_found", 404)
         st.db.audit(s, user.username, "delete_blackout", f"#{b.id} {bk.fmt_local(b.start, st.cfg.tz)}–{bk.fmt_local(b.end, st.cfg.tz)} {b.reason}")
         s.delete(b)
         s.commit()
@@ -96,7 +97,7 @@ def delete_announcement(announcement_id: int, user: User = Depends(require_admin
     with st.db.session() as s:
         a = s.get(Announcement, announcement_id)
         if a is None:
-            raise HTTPException(404, "找不到公告")
+            raise AppError("err.announcement_not_found", 404)
         st.db.audit(s, user.username, "delete_announcement", a.body[:200])
         s.delete(a)
         s.commit()

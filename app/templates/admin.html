@@ -1,38 +1,38 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>管理</h1>
-<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
+<h1>{{ t('admin.title') }}</h1>
+<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(340px,100%),1fr))">
   <form class="card" id="rules-form">
-    <h2>預約規則</h2>
-    <p class="muted small" style="margin-top:0">管理員不受配額限制，但仍不能與別人的預約重疊。</p>
-    <label class="field"><span>單次預約最長（小時）</span><input type="number" name="max_hours_per_booking" min="0.5" step="0.5" required></label>
-    <label class="field"><span>每人每週上限（GPU·小時 = 小時 × 張數）</span><input type="number" name="max_gpu_hours_per_week" min="1" step="1" required></label>
-    <label class="field"><span>最多可提前幾天預約</span><input type="number" name="max_days_ahead" min="1" step="1" required></label>
-    <label class="field"><span>單次最多幾張 GPU（0 = 不限）</span><input type="number" name="max_gpus_per_booking" min="0" step="1" required></label>
-    <label class="field"><span>本地顯卡記憶體（GB）：預估用量在這以下時，提醒改在本地跑（僅提醒；0 = 不提醒）</span><input type="number" name="local_gpu_mem_gb" min="0" step="0.5" required></label>
-    <label class="field"><span><input type="checkbox" name="flag_unbooked_on_free_gpu"> 在沒人預約的卡上跑程式也標示「未預約」</span></label>
-    <button class="primary" type="submit">儲存規則</button>
+    <h2>{{ t('admin.rules') }}</h2>
+    <p class="muted small" style="margin-top:0">{{ t('admin.rules_help') }}</p>
+    <label class="field"><span>{{ t('admin.r_hours') }}</span><input type="number" name="max_hours_per_booking" min="0.5" step="0.5" required></label>
+    <label class="field"><span>{{ t('admin.r_week') }}</span><input type="number" name="max_gpu_hours_per_week" min="1" step="1" required></label>
+    <label class="field"><span>{{ t('admin.r_days') }}</span><input type="number" name="max_days_ahead" min="1" step="1" required></label>
+    <label class="field"><span>{{ t('admin.r_gpus') }}</span><input type="number" name="max_gpus_per_booking" min="0" step="1" required></label>
+    <label class="field"><span>{{ t('admin.r_local') }}</span><input type="number" name="local_gpu_mem_gb" min="0" step="0.5" required></label>
+    <label class="field"><span><input type="checkbox" name="flag_unbooked_on_free_gpu"> {{ t('admin.r_flag') }}</span></label>
+    <button class="primary" type="submit">{{ t('admin.save_rules') }}</button>
   </form>
 
   <div class="card">
-    <h2>公告</h2>
+    <h2>{{ t('admin.ann') }}</h2>
     <form id="ann-form">
-      <label class="field"><textarea name="body" maxlength="2000" placeholder="例如：9/30 18:00 起停機更新驅動程式" required></textarea></label>
-      <button class="primary" type="submit">發布公告</button>
+      <label class="field"><textarea name="body" maxlength="2000" placeholder="{{ t('admin.ann_ph') }}" required></textarea></label>
+      <button class="primary" type="submit">{{ t('admin.ann_post') }}</button>
     </form>
     <div id="ann-list" class="small" style="margin-top:12px"></div>
   </div>
 
   <div class="card">
-    <h2>維護時段</h2>
-    <p class="muted small" style="margin-top:0">維護時段內所有 GPU 都不能預約。已存在的預約不會自動刪除，會列出來讓你決定。</p>
+    <h2>{{ t('admin.maint') }}</h2>
+    <p class="muted small" style="margin-top:0">{{ t('admin.maint_help') }}</p>
     <form id="bo-form">
-      <div class="dt-row">
-        <label class="field"><span>開始</span><input type="datetime-local" name="start" required></label>
-        <label class="field"><span>結束</span><input type="datetime-local" name="end" required></label>
+      <div class="dt-row stacked">
+        <label class="field"><span>{{ t('common.start') }}</span><input type="datetime-local" name="start" required></label>
+        <label class="field"><span>{{ t('common.end') }}</span><input type="datetime-local" name="end" required></label>
       </div>
-      <label class="field"><span>原因</span><input name="reason" maxlength="500" style="width:100%" placeholder="例如：更新 CUDA / 機房停電"></label>
-      <button class="primary" type="submit">新增維護時段</button>
+      <label class="field"><span>{{ t('admin.maint_reason') }}</span><input name="reason" maxlength="500" style="width:100%" placeholder="{{ t('admin.maint_reason_ph') }}"></label>
+      <button class="primary" type="submit">{{ t('admin.maint_add') }}</button>
     </form>
     <div id="bo-conflicts"></div>
     <div id="bo-list" class="small" style="margin-top:12px"></div>
@@ -40,9 +40,9 @@
 </div>
 
 <div class="card" style="margin-top:16px">
-  <h2>操作紀錄</h2>
+  <h2>{{ t('admin.audit') }}</h2>
   <div class="table-wrap"><table>
-    <thead><tr><th>時間</th><th>使用者</th><th>動作</th><th>內容</th></tr></thead>
+    <thead><tr><th>{{ t('admin.col_time') }}</th><th>{{ t('admin.col_user') }}</th><th>{{ t('admin.col_action') }}</th><th>{{ t('admin.col_detail') }}</th></tr></thead>
     <tbody id="audit-rows"></tbody>
   </table></div>
 </div>

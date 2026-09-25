@@ -16,13 +16,13 @@
           <td class="num">${u.booked}</td>
           <td class="num">${u.used}</td>
           <td class="num">${u.unbooked > 0 ? `<span class="chip warn">⚠ ${u.unbooked}</span>` : "0"}</td>
-          <td class="num">${u.used > 0 ? `${u.peak_mem_gb} GB${localLimit && u.peak_mem_gb <= localLimit ? ` <span class="chip" title="最高用量不到 ${localLimit} GB，本地顯卡可能就跑得動">本地可跑？</span>` : ""}` : "—"}</td>
-          <td><div class="hbar" title="預約 ${u.booked}／實際 ${u.used} GPU·小時"><i class="b" style="width:${(u.booked / max) * 100}%"></i><i class="u" style="width:${(u.used / max) * 100}%"></i></div></td>
+          <td class="num">${u.used > 0 ? `${u.peak_mem_gb} GB${localLimit && u.peak_mem_gb <= localLimit ? ` <span class="chip" title="${T("stats.local_ok_title", { limit: localLimit })}">${T("stats.local_ok")}</span>` : ""}` : "—"}</td>
+          <td><div class="hbar" title="${T("stats.bar_title", { b: u.booked, u: u.used })}"><i class="b" style="width:${(u.booked / max) * 100}%"></i><i class="u" style="width:${(u.used / max) * 100}%"></i></div></td>
         </tr>`).join("");
       return `<div class="card"><h2>${fmtDate(ws)} – ${fmtDate(we)}</h2>
         <div class="table-wrap"><table>
-          <thead><tr><th>使用者</th><th>預約 (GPU·時)</th><th>實際使用 (GPU·時)</th><th>未預約使用</th><th>最高顯存</th><th style="width:34%"></th></tr></thead>
-          <tbody>${rows || `<tr><td colspan="6" class="muted">這週沒有紀錄</td></tr>`}</tbody>
+          <thead><tr><th>${T("stats.col_user")}</th><th>${T("stats.col_booked")}</th><th>${T("stats.col_used")}</th><th>${T("stats.col_unbooked")}</th><th>${T("stats.col_peak")}</th><th style="width:34%"></th></tr></thead>
+          <tbody>${rows || `<tr><td colspan="6" class="muted">${T("stats.empty")}</td></tr>`}</tbody>
         </table></div></div>`;
     });
     document.getElementById("weeks-out").innerHTML = out.join("");

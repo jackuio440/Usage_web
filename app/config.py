@@ -40,7 +40,7 @@ class Config:
     cookie_secure: bool = False
     data_dir: Path = Path("./data")
     timezone: str = "Asia/Taipei"
-    site_title: str = "GPU 伺服器使用登記"
+    site_title: str = ""  # empty = default name in the viewer's language
 
     pam_service: str = "login"
     admin_groups: list[str] = field(default_factory=lambda: ["sudo", "wheel"])

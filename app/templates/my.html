@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>我的預約</h1>
+<h1>{{ t('my.title') }}</h1>
 <div class="grid sys" id="quota-tiles"></div>
 <div class="card">
-  <div class="row" style="margin-bottom:8px"><h2 style="margin:0">近 30 天與未來的預約</h2><span class="spacer"></span><a class="btn primary" href="/calendar">＋ 新增預約</a></div>
+  <div class="row" style="margin-bottom:8px"><h2 style="margin:0">{{ t('my.list_title') }}</h2><span class="spacer"></span><a class="btn primary" href="/calendar">{{ t('common.new_booking') }}</a></div>
   <div class="table-wrap"><table>
-    <thead><tr><th>狀態</th><th>GPU</th><th>開始</th><th>結束</th><th>時數</th><th>用途</th><th></th></tr></thead>
-    <tbody id="my-rows"><tr><td colspan="7" class="muted">讀取中…</td></tr></tbody>
+    <thead><tr><th>{{ t('my.col_state') }}</th><th>GPU</th><th>{{ t('common.start') }}</th><th>{{ t('common.end') }}</th><th>{{ t('common.hours') }}</th><th>{{ t('my.col_purpose') }}</th><th></th></tr></thead>
+    <tbody id="my-rows"><tr><td colspan="7" class="muted">{{ t('common.loading') }}</td></tr></tbody>
   </table></div>
 </div>
 {% endblock %}

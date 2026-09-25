@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import AwareDatetime, BaseModel, Field
 from sqlalchemy import select
 
@@ -12,6 +12,7 @@ from . import bookings as bk
 from .auth import User, current_user, is_system_user
 from .db import Announcement, Blackout, Booking, UsageHourly, from_db, iso, to_db, utcnow
 from .gpu import gpu_to_dict, system_status
+from .i18n import AppError, get_lang, tr
 from .state import AppState, get_state
 
 router = APIRouter(prefix="/api")
@@ -30,14 +31,14 @@ def parse_query_dt(value: str, st: AppState) -> datetime:
     try:
         dt = datetime.fromisoformat(value.replace(" ", "+").replace("Z", "+00:00"))
     except ValueError as e:
-        raise HTTPException(400, f"時間格式錯誤：{value}") from e
+        raise AppError("err.bad_time", 400, value=value) from e
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=st.cfg.tz)
     return to_db(dt)
 
 
 @router.get("/status")
-def status(user: User = Depends(current_user), st: AppState = Depends(get_state)):
+def status(request: Request, user: User = Depends(current_user), st: AppState = Depends(get_state)):
     gpus = st.monitor.read()
     rules = st.db.get_rules()
     now = utcnow()
@@ -70,7 +71,7 @@ def status(user: User = Depends(current_user), st: AppState = Depends(get_state)
     return {
         "now": iso(now),
         "gpus": out,
-        "gpu_error": st.monitor.error,
+        "gpu_error": tr(get_lang(request), st.monitor.error[0], **st.monitor.error[1]) if st.monitor.error else None,
         "system": system_status(st.cfg.disk_paths),
         "announcements": announcements,
         "blackouts": blackouts,
@@ -92,21 +93,18 @@ def events(
 
 
 def _validate(st: AppState, s, user: User, body: BookingIn, existing: Booking | None = None):
-    try:
-        bk.validate(
-            s,
-            user=user,
-            rules=st.db.get_rules(),
-            gpu_count=st.monitor.gpu_count(),
-            tz=st.cfg.tz,
-            gpus=body.gpus,
-            start=to_db(body.start),
-            end=to_db(body.end),
-            existing=existing,
-            mem_gb=body.mem_gb,
-        )
-    except bk.BookingError as e:
-        raise HTTPException(409, str(e)) from e
+    bk.validate(
+        s,
+        user=user,
+        rules=st.db.get_rules(),
+        gpu_count=st.monitor.gpu_count(),
+        tz=st.cfg.tz,
+        gpus=body.gpus,
+        start=to_db(body.start),
+        end=to_db(body.end),
+        existing=existing,
+        mem_gb=body.mem_gb,
+    )
 
 
 def _span(st: AppState, start: datetime, end: datetime) -> str:
@@ -139,9 +137,9 @@ def create_booking(body: BookingIn, user: User = Depends(current_user), st: AppS
 def _get_owned(s, booking_id: int, user: User) -> Booking:
     b = s.get(Booking, booking_id)
     if b is None:
-        raise HTTPException(404, "找不到這筆預約")
+        raise AppError("err.booking_not_found", 404)
     if b.username != user.username and not user.is_admin:
-        raise HTTPException(403, "只能修改自己的預約")
+        raise AppError("err.not_owner", 403)
     return b
 
 
@@ -168,7 +166,7 @@ def delete_booking(booking_id: int, user: User = Depends(current_user), st: AppS
             st.db.audit(s, user.username, "end_booking_early", f"#{b.id} ({b.username})")
             result = {"ended": True, "booking": b.to_dict()}
         elif b.end <= now and not user.is_admin:
-            raise HTTPException(409, "已結束的預約會保留作為紀錄，不能刪除")
+            raise AppError("err.ended_keep", 409)
         else:
             st.db.audit(s, user.username, "delete_booking", f"#{b.id} ({b.username}) GPU {b.gpus} {_span(st, b.start, b.end)}")
             s.delete(b)

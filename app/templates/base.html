@@ -1,33 +1,37 @@
 <!doctype html>
-<html lang="zh-Hant-TW">
+<html lang="{{ 'zh-Hant-TW' if lang == 'zh' else 'en' }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}{{ cfg.site_title }}{% endblock %}</title>
+  <title>{% block title %}{{ site_title }}{% endblock %}</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/css/app.css">
   {% block head %}{% endblock %}
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="/">{{ cfg.site_title }}</a>
+    <a class="brand" href="/">{{ site_title }}</a>
     <nav class="nav">
-      <a href="/" class="{{ 'active' if page == 'dashboard' }}">即時狀態</a>
-      <a href="/calendar" class="{{ 'active' if page == 'calendar' }}">預約時間表</a>
-      <a href="/my" class="{{ 'active' if page == 'my' }}">我的預約</a>
-      <a href="/stats" class="{{ 'active' if page == 'stats' }}">使用統計</a>
-      {% if user.is_admin %}<a href="/admin" class="{{ 'active' if page == 'admin' }}">管理</a>{% endif %}
+      <a href="/" class="{{ 'active' if page == 'dashboard' }}">{{ t('nav.dashboard') }}</a>
+      <a href="/calendar" class="{{ 'active' if page == 'calendar' }}">{{ t('nav.calendar') }}</a>
+      <a href="/my" class="{{ 'active' if page == 'my' }}">{{ t('nav.my') }}</a>
+      <a href="/stats" class="{{ 'active' if page == 'stats' }}">{{ t('nav.stats') }}</a>
+      {% if user.is_admin %}<a href="/admin" class="{{ 'active' if page == 'admin' }}">{{ t('nav.admin') }}</a>{% endif %}
     </nav>
     <div class="who">
+      <a class="lang-switch" href="/lang/{{ 'en' if lang == 'zh' else 'zh' }}?next={{ request.url.path }}">{{ t('lang.switch') }}</a>
       <span>{{ user.username }}</span>
-      {% if user.is_admin %}<span class="badge">管理員</span>{% endif %}
-      {% if cfg.mock %}<span class="badge">測試模式</span>{% endif %}
-      <form method="post" action="/logout"><button class="link" type="submit">登出</button></form>
+      {% if user.is_admin %}<span class="badge">{{ t('badge.admin') }}</span>{% endif %}
+      {% if cfg.mock %}<span class="badge">{{ t('badge.mock') }}</span>{% endif %}
+      <form method="post" action="/logout"><button class="link" type="submit">{{ t('nav.logout') }}</button></form>
     </div>
   </header>
   <main>{% block content %}{% endblock %}</main>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script>window.APP = {{ {"username": user.username, "isAdmin": user.is_admin, "tz": cfg.timezone} | tojson }};</script>
+  <script>
+    window.APP = {{ {"username": user.username, "isAdmin": user.is_admin, "tz": cfg.timezone, "lang": lang} | tojson }};
+    window.I18N = {{ i18n | tojson }};
+  </script>
   <script src="/static/js/common.js"></script>
   {% block scripts %}{% endblock %}
 </body>

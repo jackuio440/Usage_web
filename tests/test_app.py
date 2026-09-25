@@ -204,3 +204,26 @@ def test_week_boundaries_use_local_time():
     # Sunday 2026-09-27 17:00 UTC = Monday 01:00 in Taipei -> week starts Monday 00:00 Taipei (Sun 16:00 UTC)
     assert week_start(datetime(2026, 9, 27, 17), tz) == datetime(2026, 9, 27, 16)
     assert len(weeks_touched(datetime(2026, 9, 27, 15), datetime(2026, 9, 27, 17), tz)) == 2
+
+
+def test_english_messages(app, alice, bob):
+    assert book(alice, [0], at(1), at(3)).status_code == 200
+    r = book(bob, [0], at(2), at(4))
+    assert "已被 alice 預約" in r.json()["detail"]
+    bob.cookies.set("lang", "en")
+    r = book(bob, [0], at(2), at(4))
+    assert r.json()["detail"].startswith("GPU 0 is booked by alice")
+    assert "Schedule" in bob.get("/calendar").text
+
+
+def test_language_follows_browser_then_toggle(app):
+    c = TestClient(app)
+    assert "Log in with your Linux account" in c.get("/login", headers={"Accept-Language": "en-US,en;q=0.9"}).text
+    assert "請用伺服器的 Linux 帳號" in c.get("/login", headers={"Accept-Language": "zh-TW,zh;q=0.9"}).text
+    r = c.get("/lang/en?next=/calendar", follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/calendar"
+    assert "Log in with your Linux account" in c.get("/login", headers={"Accept-Language": "zh-TW"}).text
+    r = c.post("/login", data={"username": "x", "password": "wrong"})
+    assert "Wrong username or password" in r.text
+    # no open redirect through ?next=
+    assert c.get("/lang/zh?next=//evil.example", follow_redirects=False).headers["location"] == "/"

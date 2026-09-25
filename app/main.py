@@ -7,7 +7,7 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi import FastAPI, Form, Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -18,6 +18,7 @@ from .auth import Authenticator
 from .config import Config, load_config
 from .db import Database
 from .gpu import GPUMonitor
+from .i18n import LANGS, AppError, get_lang, table, tr
 from .sampler import run_sampler
 from .state import AppState
 
@@ -62,10 +63,25 @@ def create_app(cfg: Config | None = None, start_sampler: bool = True) -> FastAPI
                 return JSONResponse({"detail": "missing X-Requested-With header"}, status_code=403)
         return await call_next(request)
 
+    @app.exception_handler(AppError)
+    async def app_error(request: Request, exc: AppError):
+        return JSONResponse({"detail": exc.message(get_lang(request))}, status_code=exc.status)
+
     app.include_router(api.router)
     app.include_router(admin.router)
     app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
     templates = Jinja2Templates(directory=HERE / "templates")
+
+    def render(request: Request, name: str, status_code: int = 200, **ctx) -> Response:
+        lang = get_lang(request)
+        ctx.update(
+            cfg=cfg,
+            lang=lang,
+            t=lambda key, **kw: tr(lang, key, **kw),
+            i18n=table(lang),
+            site_title=cfg.site_title or tr(lang, "site.title"),
+        )
+        return templates.TemplateResponse(request, name, ctx, status_code=status_code)
 
     def page(name: str, admin_only: bool = False):
         async def handler(request: Request) -> Response:
@@ -73,10 +89,8 @@ def create_app(cfg: Config | None = None, start_sampler: bool = True) -> FastAPI
             if not user:
                 return RedirectResponse(f"/login?next={request.url.path}", status_code=303)
             if admin_only and not user["is_admin"]:
-                raise HTTPException(403, "需要管理員權限")
-            return templates.TemplateResponse(
-                request, f"{name}.html", {"user": user, "cfg": cfg, "page": name}
-            )
+                raise AppError("err.admin_only", 403)
+            return render(request, f"{name}.html", user=user, page=name)
 
         return handler
 
@@ -91,21 +105,17 @@ def create_app(cfg: Config | None = None, start_sampler: bool = True) -> FastAPI
 
     @app.get("/login", include_in_schema=False)
     async def login_page(request: Request, next: str = "/"):
-        return templates.TemplateResponse(
-            request, "login.html", {"cfg": cfg, "next": safe_next(next), "error": None, "username": ""}
-        )
+        return render(request, "login.html", next=safe_next(next), error=None, username="")
 
     @app.post("/login", include_in_schema=False)
     def login(request: Request, username: str = Form(""), password: str = Form(""), next: str = Form("/")):
         client_ip = request.client.host if request.client else "?"
         try:
             user = state.auth.login(username, password, client_ip)
-        except HTTPException as e:
-            return templates.TemplateResponse(
-                request,
-                "login.html",
-                {"cfg": cfg, "next": safe_next(next), "error": e.detail, "username": username},
-                status_code=e.status_code,
+        except AppError as e:
+            return render(
+                request, "login.html", status_code=e.status,
+                next=safe_next(next), error=e.message(get_lang(request)), username=username,
             )
         request.session.clear()
         request.session["user"] = {"username": user.username, "is_admin": user.is_admin}
@@ -115,6 +125,13 @@ def create_app(cfg: Config | None = None, start_sampler: bool = True) -> FastAPI
     async def logout(request: Request):
         request.session.clear()
         return RedirectResponse("/login", status_code=303)
+
+    @app.get("/lang/{code}", include_in_schema=False)
+    async def set_lang(code: str, next: str = "/"):
+        resp = RedirectResponse(safe_next(next), status_code=303)
+        if code in LANGS:
+            resp.set_cookie("lang", code, max_age=365 * 86400, samesite="lax")
+        return resp
 
     @app.get("/healthz", include_in_schema=False)
     async def healthz():

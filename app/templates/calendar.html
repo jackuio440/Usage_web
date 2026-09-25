@@ -1,31 +1,31 @@
 {% extends "base.html" %}
 {% block head %}
 <script src="/static/vendor/fullcalendar/index.global.min.js"></script>
-<script src="/static/vendor/fullcalendar/zh-tw.global.min.js"></script>
+{% if lang == 'zh' %}<script src="/static/vendor/fullcalendar/zh-tw.global.min.js"></script>{% endif %}
 {% endblock %}
 {% block content %}
 <div class="row" style="margin-bottom:8px">
-  <h1 style="margin:0">預約時間表</h1>
+  <h1 style="margin:0">{{ t('cal.title') }}</h1>
   <span class="spacer"></span>
   <span class="quota" id="quota"></span>
-  <button class="primary" id="new-btn">＋ 新增預約</button>
+  <button class="primary" id="new-btn">{{ t('common.new_booking') }}</button>
 </div>
-<p class="muted small" style="margin-top:0">在空白處按一下（時間表）或拖曳選取時段（週曆）即可預約；點自己的預約可以修改或取消。</p>
+<p class="muted small" style="margin-top:0">{{ t('cal.help') }}</p>
 <div class="tabs">
-  <button data-view="timeline" class="active">GPU 時間表</button>
-  <button data-view="week">週曆</button>
+  <button data-view="timeline" class="active">{{ t('cal.tab_timeline') }}</button>
+  <button data-view="week">{{ t('cal.tab_week') }}</button>
 </div>
 <div class="row" style="margin-bottom:10px">
   <div class="legend">
-    <span><i class="dot" style="background:var(--series-1)"></i>我的預約</span>
-    <span><i class="dot" style="background:var(--other)"></i>其他人</span>
-    <span><i class="dot swatch-maint"></i>維護時段</span>
+    <span><i class="dot" style="background:var(--series-1)"></i>{{ t('cal.legend_mine') }}</span>
+    <span><i class="dot" style="background:var(--other)"></i>{{ t('cal.legend_other') }}</span>
+    <span><i class="dot swatch-maint"></i>{{ t('cal.legend_maint') }}</span>
   </div>
   <span class="spacer"></span>
   <div class="row" id="timeline-nav">
-    <button id="tl-prev">‹ 前 7 天</button>
-    <button id="tl-today">今天</button>
-    <button id="tl-next">後 7 天 ›</button>
+    <button id="tl-prev">{{ t('cal.prev') }}</button>
+    <button id="tl-today">{{ t('cal.today') }}</button>
+    <button id="tl-next">{{ t('cal.next') }}</button>
   </div>
   <div class="gpu-filter" id="gpu-filter" hidden></div>
 </div>
@@ -34,24 +34,22 @@
 
 <dialog id="booking-dialog">
   <form method="dialog" id="booking-form">
-    <h2 id="dlg-title">新增預約</h2>
+    <h2 id="dlg-title">{{ t('cal.dlg_new') }}</h2>
     <div id="dlg-owner" class="muted small" hidden></div>
     <div class="dt-row">
-      <label class="field"><span>開始</span><input type="datetime-local" id="f-start" step="1800" required></label>
-      <label class="field"><span>結束</span><input type="datetime-local" id="f-end" step="1800" required></label>
+      <label class="field"><span>{{ t('common.start') }}</span><input type="datetime-local" id="f-start" step="1800" required></label>
+      <label class="field"><span>{{ t('common.end') }}</span><input type="datetime-local" id="f-end" step="1800" required></label>
     </div>
-    <div class="field"><span class="small muted">GPU（可同時選兩張；劃線 = 該時段已被預約）</span><div class="gpu-picks" id="f-gpus"></div></div>
-    <label class="field" id="mem-field"><span>預估需要的 GPU 記憶體（每張卡，GB）</span><input type="number" id="f-mem" min="0.5" max="1024" step="0.5" placeholder="例如 12" inputmode="decimal"></label>
-    <div class="notice warn small" id="local-hint" hidden>
-      💡 預估在 <b id="local-limit"></b> GB 以內，<b>本地顯卡應該跑得動</b>，可以的話請先在自己的電腦上跑，把伺服器留給需要大記憶體的實驗。（僅提醒，仍可直接預約）
-    </div>
-    <label class="field"><span>用途 / 備註</span><textarea id="f-purpose" maxlength="500" placeholder="例如：訓練 ResNet 實驗、論文實驗"></textarea></label>
+    <div class="field"><span class="small muted">{{ t('cal.dlg_gpus') }}</span><div class="gpu-picks" id="f-gpus"></div></div>
+    <label class="field" id="mem-field"><span>{{ t('cal.dlg_mem') }}</span><input type="number" id="f-mem" min="0.5" max="1024" step="0.5" placeholder="{{ t('cal.dlg_mem_ph') }}" inputmode="decimal"></label>
+    <div class="notice warn small" id="local-hint" hidden></div>
+    <label class="field"><span>{{ t('cal.dlg_purpose') }}</span><textarea id="f-purpose" maxlength="500" placeholder="{{ t('cal.dlg_purpose_ph') }}"></textarea></label>
     <div class="notice error small" id="dlg-error" hidden></div>
     <div class="row">
-      <button type="button" class="danger" id="dlg-delete" hidden>取消預約</button>
+      <button type="button" class="danger" id="dlg-delete" hidden>{{ t('cal.cancel_booking') }}</button>
       <span class="spacer"></span>
-      <button type="button" id="dlg-close">關閉</button>
-      <button type="submit" class="primary" id="dlg-save">儲存</button>
+      <button type="button" id="dlg-close">{{ t('common.close') }}</button>
+      <button type="submit" class="primary" id="dlg-save">{{ t('common.save') }}</button>
     </div>
   </form>
 </dialog>

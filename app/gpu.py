@@ -152,7 +152,7 @@ class GPUMonitor:
         self.cfg = cfg
         self._lock = threading.Lock()
         self._cached: tuple[float, list[GPUInfo]] | None = None
-        self.error: str | None = None
+        self.error: tuple[str, dict] | None = None  # (i18n key, params)
         self.known_count = 0  # keeps bookings working if a single read fails
         self.reader = self._make_reader()
 
@@ -164,7 +164,7 @@ class GPUMonitor:
                 return cls()
             except Exception as e:  # noqa: BLE001 - try the next backend
                 log.warning("GPU backend %s unavailable: %s", cls.__name__, e)
-        self.error = "讀不到 GPU（找不到 NVIDIA 驅動程式 / nvidia-smi）"
+        self.error = ("gpu.error.none", {})
         return None
 
     def read(self, max_age: float | None = None) -> list[GPUInfo]:
@@ -181,7 +181,7 @@ class GPUMonitor:
                     self.error = None
                 except Exception as e:  # noqa: BLE001 - keep serving the site even if the driver hiccups
                     log.exception("GPU read failed")
-                    self.error = f"讀取 GPU 失敗：{e}"
+                    self.error = ("gpu.error.read", {"detail": str(e)})
                     gpus = self._cached[1] if self._cached else []
             self._cached = (now, gpus)
             return gpus

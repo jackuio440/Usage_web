@@ -1,16 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="row" style="margin-bottom:12px">
-  <h1 style="margin:0">使用統計</h1>
+  <h1 style="margin:0">{{ t('stats.title') }}</h1>
   <span class="spacer"></span>
-  <label class="small">顯示
-    <select id="weeks"><option value="1">本週</option><option value="4" selected>近 4 週</option><option value="12">近 12 週</option></select>
+  <label class="small">{{ t('stats.show') }}
+    <select id="weeks"><option value="1">{{ t('stats.week1') }}</option><option value="4" selected>{{ t('stats.week4') }}</option><option value="12">{{ t('stats.week12') }}</option></select>
   </label>
 </div>
-<p class="muted small">「預約」= 預約的 GPU·小時；「實際使用」= 每分鐘檢查一次，該使用者在 GPU 上有程式在跑的 GPU·小時；「未預約使用」= 實際使用中，沒有對應預約的部分；「最高顯存」= 單張卡上看到的最高 GPU 記憶體用量。</p>
+<p class="muted small">{{ t('stats.help') }}</p>
 <div class="legend" style="margin-bottom:12px">
-  <span><i class="dot" style="background:var(--series-1)"></i>預約</span>
-  <span><i class="dot" style="background:var(--series-2)"></i>實際使用</span>
+  <span><i class="dot" style="background:var(--series-1)"></i>{{ t('stats.booked') }}</span>
+  <span><i class="dot" style="background:var(--series-2)"></i>{{ t('stats.used') }}</span>
 </div>
 <div id="weeks-out" class="stack"></div>
 {% endblock %}

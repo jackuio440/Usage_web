@@ -5,12 +5,12 @@
 <div class="row" style="margin-bottom:12px">
   <h1 style="margin:0">GPU</h1>
   <span class="legend">
-    <span><span class="chip warn">⚠ 未預約</span> 沒預約就在用</span>
-    <span><span class="chip crit">✕ 佔用</span> 用了別人預約的卡</span>
+    <span><span class="chip warn">{{ t('dash.chip_unbooked') }}</span> {{ t('dash.legend_unbooked') }}</span>
+    <span><span class="chip crit">{{ t('dash.chip_conflict') }}</span> {{ t('dash.legend_conflict') }}</span>
   </span>
   <span class="spacer"></span>
   <span class="muted small" id="updated"></span>
 </div>
-<div class="grid gpus" id="gpus"><p class="muted">讀取中…</p></div>
+<div class="grid gpus" id="gpus"><p class="muted">{{ t('common.loading') }}</p></div>
 {% endblock %}
 {% block scripts %}<script src="/static/js/dashboard.js"></script>{% endblock %}

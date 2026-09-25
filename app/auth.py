@@ -9,9 +9,10 @@ import threading
 import time
 from dataclasses import dataclass
 
-from fastapi import HTTPException, Request
+from fastapi import Request
 
 from .config import Config
+from .i18n import AppError
 
 MAX_FAILURES = 5
 LOCKOUT_SECONDS = 600
@@ -103,16 +104,16 @@ class Authenticator:
         return pam.pam().authenticate(username, password, service=self.cfg.pam_service)
 
     def login(self, username: str, password: str, client_ip: str) -> User:
-        """Return the user, or raise HTTPException with a message fit to show."""
+        """Return the user, or raise AppError."""
         username = username.strip()
         keys = (f"user:{username}", f"ip:{client_ip}")
         if self.limiter.locked(*keys):
-            raise HTTPException(429, f"登入失敗次數過多，請 {LOCKOUT_SECONDS // 60} 分鐘後再試")
+            raise AppError("err.login_locked", 429, minutes=LOCKOUT_SECONDS // 60)
         ok = bool(username) and (self.cfg.mock or self._account_allowed(username))
         ok = ok and self._check_password(username, password)
         if not ok:
             self.limiter.fail(*keys)
-            raise HTTPException(401, "帳號或密碼錯誤（請使用伺服器的 Linux 帳號）")
+            raise AppError("err.login_bad", 401)
         self.limiter.reset(*keys)
         return User(username=username, is_admin=self._is_admin(username))
 
@@ -120,12 +121,12 @@ class Authenticator:
 def current_user(request: Request) -> User:
     data = request.session.get("user")
     if not data:
-        raise HTTPException(401, "請先登入")
+        raise AppError("err.login_first", 401)
     return User(**data)
 
 
 def require_admin(request: Request) -> User:
     user = current_user(request)
     if not user.is_admin:
-        raise HTTPException(403, "需要管理員權限")
+        raise AppError("err.admin_only", 403)
     return user

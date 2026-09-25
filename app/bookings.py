@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from .auth import User
 from .config import Rules
+from .i18n import AppError
 from .db import Blackout, Booking, from_db, to_db, utcnow
 
 # Check-then-write must not interleave between requests (single process, SQLite).
@@ -20,8 +21,8 @@ write_lock = threading.Lock()
 START_GRACE = timedelta(hours=1)
 
 
-class BookingError(Exception):
-    pass
+class BookingError(AppError):
+    status = 409
 
 
 def fmt_local(dt: datetime, tz: ZoneInfo) -> str:
@@ -77,53 +78,53 @@ def validate(
     mem_gb: float | None = None,
     now: datetime | None = None,
 ) -> None:
-    """Raise BookingError with a user-facing message if the booking is not allowed.
+    """Raise BookingError (a translatable message key) if the booking is not allowed.
     All datetimes are naive UTC."""
     now = now or utcnow()
     gpus = sorted(set(gpus))
 
     if not gpus:
-        raise BookingError("請至少選一張 GPU")
+        raise BookingError("err.no_gpu")
     bad = [g for g in gpus if g < 0 or g >= gpu_count]
     if bad:
-        raise BookingError(f"GPU {bad} 不存在（本機共 {gpu_count} 張，編號 0–{gpu_count - 1}）")
+        raise BookingError("err.bad_gpu", bad=bad, count=gpu_count, last=gpu_count - 1)
     if end <= start:
-        raise BookingError("結束時間必須晚於開始時間")
+        raise BookingError("err.end_before_start")
 
     if existing is not None and existing.start <= now:
         # Booking already started: only its end time may change.
         if existing.end <= now and not user.is_admin:
-            raise BookingError("已結束的預約不能修改")
+            raise BookingError("err.ended_readonly")
         if start != existing.start or gpus != existing.gpu_list:
-            raise BookingError("已開始的預約只能調整結束時間")
+            raise BookingError("err.started_only_end")
         if end <= now:
-            raise BookingError("結束時間不能早於現在；要提前結束請按「取消 / 提前結束」")
+            raise BookingError("err.end_in_past")
     elif start < now - START_GRACE and not user.is_admin:
-        raise BookingError("不能預約過去的時間")
+        raise BookingError("err.past")
 
     if not user.is_admin:
         hours = (end - start).total_seconds() / 3600
         if hours > rules.max_hours_per_booking:
-            raise BookingError(f"單次預約最多 {rules.max_hours_per_booking:g} 小時（這次 {hours:.1f} 小時）")
+            raise BookingError("err.too_long", max=f"{rules.max_hours_per_booking:g}", hours=f"{hours:.1f}")
         if start > now + timedelta(days=rules.max_days_ahead):
-            raise BookingError(f"最多只能預約 {rules.max_days_ahead} 天內的時段")
+            raise BookingError("err.too_far", days=rules.max_days_ahead)
         if rules.max_gpus_per_booking and len(gpus) > rules.max_gpus_per_booking:
-            raise BookingError(f"單次預約最多 {rules.max_gpus_per_booking} 張 GPU")
+            raise BookingError("err.too_many_gpus", max=rules.max_gpus_per_booking)
         # The estimate drives the "run it locally" reminder in the booking dialog; it never blocks.
         if rules.local_gpu_mem_gb > 0 and mem_gb is None and (existing is None or existing.mem_gb is not None):
-            raise BookingError("請填寫預估需要的 GPU 記憶體（GB）")
+            raise BookingError("err.mem_required")
         exclude = existing.id if existing else None
         for ws, we in weeks_touched(start, end, tz):
             used = gpu_hours_in(s, user.username, ws, we, exclude_id=exclude)
             new = overlap_hours(start, end, ws, we) * len(gpus)
             if used + new > rules.max_gpu_hours_per_week + 1e-9:
                 raise BookingError(
-                    f"超過每週配額：{fmt_local(ws, tz)} 起這週已預約 {used:.1f} GPU·小時，"
-                    f"加上這次 {new:.1f}，上限 {rules.max_gpu_hours_per_week:g}"
+                    "err.quota", week=fmt_local(ws, tz), used=f"{used:.1f}", new=f"{new:.1f}",
+                    max=f"{rules.max_gpu_hours_per_week:g}",
                 )
 
     for bo in s.scalars(select(Blackout).where(Blackout.start < end, Blackout.end > start)):
-        raise BookingError(f"與維護時段衝突：{fmt_local(bo.start, tz)}–{fmt_local(bo.end, tz)} {bo.reason}")
+        raise BookingError("err.blackout", start=fmt_local(bo.start, tz), end=fmt_local(bo.end, tz), reason=bo.reason)
 
     for other in overlapping_bookings(s, start, end):
         if existing is not None and other.id == existing.id:
@@ -131,8 +132,8 @@ def validate(
         shared = sorted(set(other.gpu_list) & set(gpus))
         if shared:
             raise BookingError(
-                f"GPU {','.join(map(str, shared))} 在 {fmt_local(other.start, tz)}–{fmt_local(other.end, tz)} "
-                f"已被 {other.username} 預約"
+                "err.conflict", gpus=",".join(map(str, shared)), user=other.username,
+                start=fmt_local(other.start, tz), end=fmt_local(other.end, tz),
             )
 
 

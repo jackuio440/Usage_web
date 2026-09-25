@@ -217,6 +217,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .35); }
 .gpu-picks label.busy { opacity: .5; text-decoration: line-through; }
 .dt-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
 .dt-row input { width: 100%; min-width: 0; }
+.dt-row.stacked { grid-template-columns: minmax(0, 1fr); gap: 0; }
 @media (max-width: 480px) { .dt-row { grid-template-columns: 1fr; } }
 .quota { font-size: .85rem; color: var(--ink-2); }
 
@@ -225,3 +226,6 @@ dialog::backdrop { background: rgba(0, 0, 0, .35); }
 .hbar i { display: block; height: 6px; border-radius: 0 3px 3px 0; min-width: 1px; }
 .hbar i.b { background: var(--series-1); }
 .hbar i.u { background: var(--series-2); }
+
+.lang-switch { font-size: .82rem; padding: 2px 8px; border: 1px solid var(--border); border-radius: 999px; text-decoration: none; color: var(--ink-2); white-space: nowrap; }
+.lang-switch:hover { background: var(--surface-2); }
