@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block head %}
+<script src="/static/vendor/fullcalendar/index.global.min.js"></script>
+<script src="/static/vendor/fullcalendar/zh-tw.global.min.js"></script>
+{% endblock %}
+{% block content %}
+<div class="row" style="margin-bottom:8px">
+  <h1 style="margin:0">預約時間表</h1>
+  <span class="spacer"></span>
+  <span class="quota" id="quota"></span>
+  <button class="primary" id="new-btn">＋ 新增預約</button>
+</div>
+<p class="muted small" style="margin-top:0">在空白處按一下（時間表）或拖曳選取時段（週曆）即可預約；點自己的預約可以修改或取消。</p>
+<div class="tabs">
+  <button data-view="timeline" class="active">GPU 時間表</button>
+  <button data-view="week">週曆</button>
+</div>
+<div class="row" style="margin-bottom:10px">
+  <div class="legend">
+    <span><i class="dot" style="background:var(--series-1)"></i>我的預約</span>
+    <span><i class="dot" style="background:var(--other)"></i>其他人</span>
+    <span><i class="dot swatch-maint"></i>維護時段</span>
+  </div>
+  <span class="spacer"></span>
+  <div class="row" id="timeline-nav">
+    <button id="tl-prev">‹ 前 7 天</button>
+    <button id="tl-today">今天</button>
+    <button id="tl-next">後 7 天 ›</button>
+  </div>
+  <div class="gpu-filter" id="gpu-filter" hidden></div>
+</div>
+<div id="timeline-view"><div class="timeline-scroll" id="timeline-scroll"><div class="timeline" id="timeline"></div></div></div>
+<div id="week-view" hidden><div id="calendar"></div></div>
+
+<dialog id="booking-dialog">
+  <form method="dialog" id="booking-form">
+    <h2 id="dlg-title">新增預約</h2>
+    <div id="dlg-owner" class="muted small" hidden></div>
+    <div class="dt-row">
+      <label class="field"><span>開始</span><input type="datetime-local" id="f-start" step="1800" required></label>
+      <label class="field"><span>結束</span><input type="datetime-local" id="f-end" step="1800" required></label>
+    </div>
+    <div class="field"><span class="small muted">GPU（劃線 = 該時段已被預約）</span><div class="gpu-picks" id="f-gpus"></div></div>
+    <label class="field"><span>用途 / 備註</span><textarea id="f-purpose" maxlength="500" placeholder="例如：訓練 ResNet 實驗、論文實驗"></textarea></label>
+    <div class="notice error small" id="dlg-error" hidden></div>
+    <div class="row">
+      <button type="button" class="danger" id="dlg-delete" hidden>取消預約</button>
+      <span class="spacer"></span>
+      <button type="button" id="dlg-close">關閉</button>
+      <button type="submit" class="primary" id="dlg-save">儲存</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+{% block scripts %}<script src="/static/js/calendar.js"></script>{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<div id="notices"></div>
+<div class="grid sys" id="sys"></div>
+<div class="row" style="margin-bottom:12px">
+  <h1 style="margin:0">GPU</h1>
+  <span class="legend">
+    <span><span class="chip warn">⚠ 未預約</span> 沒預約就在用</span>
+    <span><span class="chip crit">✕ 佔用</span> 用了別人預約的卡</span>
+  </span>
+  <span class="spacer"></span>
+  <span class="muted small" id="updated"></span>
+</div>
+<div class="grid gpus" id="gpus"><p class="muted">讀取中…</p></div>
+{% endblock %}
+{% block scripts %}<script src="/static/js/dashboard.js"></script>{% endblock %}

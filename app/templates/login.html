@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>登入 · {{ cfg.site_title }}</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <div class="login-wrap">
+    <form class="card login-card" method="post" action="/login">
+      <h1>{{ cfg.site_title }}</h1>
+      <p class="muted small">請用伺服器的 Linux 帳號密碼登入（跟 SSH 登入相同）。</p>
+      {% if cfg.mock %}<div class="notice small">測試模式：任意帳號，密碼 <code>test</code>；帳號以 admin 開頭者為管理員。</div>{% endif %}
+      {% if error %}<div class="notice error small">{{ error }}</div>{% endif %}
+      <input type="hidden" name="next" value="{{ next }}">
+      <label class="field"><span>帳號</span><input name="username" value="{{ username }}" autocomplete="username" autofocus required></label>
+      <label class="field"><span>密碼</span><input name="password" type="password" autocomplete="current-password" required></label>
+      <button class="primary" type="submit" style="width:100%">登入</button>
+    </form>
+  </div>
+</body>
+</html>

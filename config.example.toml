@@ -1,0 +1,37 @@
+# GPU 伺服器使用登記網站 設定檔
+# 安裝後位於 /etc/usage-web/config.toml，修改後執行：sudo systemctl restart usage-web
+
+[server]
+# 127.0.0.1 = 只接受本機連線，大家透過 SSH 通道連進來（不用另外申請 port）
+# 0.0.0.0   = 接受區網直接連線（需要機房開放下面的 port）
+host = "127.0.0.1"
+port = 8080
+data_dir = "/var/lib/usage-web"       # 資料庫與 session 金鑰存放位置
+timezone = "Asia/Taipei"
+site_title = "GPU 伺服器使用登記"
+# 有加 HTTPS（反向代理）時才設成 true
+cookie_secure = false
+
+[auth]
+# 用伺服器的 Linux 帳號密碼登入（PAM）。install.sh 會建立 /etc/pam.d/usage-web
+pam_service = "usage-web"
+# 屬於這些 Linux 群組的人是網站管理員
+admin_groups = ["sudo", "wheel"]
+# 只允許這些群組的人登入；空白 = 所有一般帳號（UID >= min_uid）
+allowed_groups = []
+min_uid = 1000
+
+[gpu]
+cache_seconds = 5              # GPU 狀態快取秒數（多人同時開網頁也只查一次）
+sample_interval_seconds = 60   # 每隔多久記錄一次實際使用者（統計用）
+usage_retention_days = 400     # 使用紀錄保留天數
+disk_paths = ["/"]             # 儀表板要顯示的硬碟，例如 ["/", "/data"]
+# mock = true                  # 開發用：假 GPU + 任何帳號用密碼 test 登入。正式環境不要開！
+
+[rules]
+# 預設預約規則；管理員可以在網站「管理」頁面直接修改（以網頁上的設定為準）
+max_hours_per_booking = 72     # 單次預約最長時數
+max_gpu_hours_per_week = 168   # 每人每週上限，GPU·小時 = 小時 × 張數
+max_days_ahead = 14            # 最多可以提前幾天預約
+max_gpus_per_booking = 0       # 單次最多幾張，0 = 不限
+flag_unbooked_on_free_gpu = true  # 在沒人預約的卡上跑程式，也標示「未預約」

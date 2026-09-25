@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>我的預約</h1>
+<div class="grid sys" id="quota-tiles"></div>
+<div class="card">
+  <div class="row" style="margin-bottom:8px"><h2 style="margin:0">近 30 天與未來的預約</h2><span class="spacer"></span><a class="btn primary" href="/calendar">＋ 新增預約</a></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>狀態</th><th>GPU</th><th>開始</th><th>結束</th><th>時數</th><th>用途</th><th></th></tr></thead>
+    <tbody id="my-rows"><tr><td colspan="7" class="muted">讀取中…</td></tr></tbody>
+  </table></div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="/static/js/my.js"></script>{% endblock %}

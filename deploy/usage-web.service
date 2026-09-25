@@ -1,0 +1,29 @@
+[Unit]
+Description=GPU server usage & booking website
+After=network.target
+
+[Service]
+User=usageweb
+Group=usageweb
+# PAM needs to read /etc/shadow to check Linux passwords
+SupplementaryGroups=shadow
+Environment=USAGE_WEB_CONFIG=/etc/usage-web/config.toml
+WorkingDirectory=/opt/usage-web
+ExecStart=/opt/usage-web/venv/bin/python -m app
+Restart=on-failure
+RestartSec=5
+
+# Stay out of the way of real workloads
+Nice=10
+CPUQuota=50%
+MemoryMax=512M
+
+# Hardening
+NoNewPrivileges=yes
+ProtectSystem=full
+ProtectHome=read-only
+PrivateTmp=yes
+ReadWritePaths=/var/lib/usage-web
+
+[Install]
+WantedBy=multi-user.target
