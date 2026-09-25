@@ -18,8 +18,8 @@ except ImportError:  # Python 3.10 (Ubuntu 22.04)
 class Rules:
     """Booking rules. Values here are defaults; admins can override them in the web UI."""
 
-    max_hours_per_booking: float = 72
-    max_gpu_hours_per_week: float = 168  # GPU-hours = hours x number of GPUs
+    max_hours_per_booking: float = 48
+    max_gpu_hours_per_week: float = 72  # GPU-hours = hours x number of GPUs; 2 GPUs = 336 per week in total
     max_days_ahead: int = 14
     max_gpus_per_booking: int = 0  # 0 = no limit
     flag_unbooked_on_free_gpu: bool = True
@@ -52,7 +52,7 @@ class Config:
     rules: Rules = field(default_factory=Rules)
 
     mock: bool = False  # fake GPUs + accept any login; development only
-    mock_gpu_count: int = 4
+    mock_gpu_count: int = 2
 
     @property
     def tz(self) -> ZoneInfo:

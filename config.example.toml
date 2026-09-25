@@ -30,8 +30,8 @@ disk_paths = ["/"]             # 儀表板要顯示的硬碟，例如 ["/", "/da
 
 [rules]
 # 預設預約規則；管理員可以在網站「管理」頁面直接修改（以網頁上的設定為準）
-max_hours_per_booking = 72     # 單次預約最長時數
-max_gpu_hours_per_week = 168   # 每人每週上限，GPU·小時 = 小時 × 張數
+max_hours_per_booking = 48     # 單次預約最長時數
+max_gpu_hours_per_week = 72    # 每人每週上限，GPU·小時 = 小時 × 張數（2 張卡一週總共 336）
 max_days_ahead = 14            # 最多可以提前幾天預約
 max_gpus_per_booking = 0       # 單次最多幾張，0 = 不限
 flag_unbooked_on_free_gpu = true  # 在沒人預約的卡上跑程式，也標示「未預約」
