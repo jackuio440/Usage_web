@@ -20,7 +20,7 @@
       const s = new Date(b.start), e = new Date(b.end);
       const state = e <= now ? `<span class="chip">已結束</span>` : s <= now ? `<span class="chip good">● 進行中</span>` : `<span class="chip">即將開始</span>`;
       const action = e <= now ? "" : `<button class="danger" data-id="${b.id}" data-running="${s <= now}">${s <= now ? "提前結束" : "取消"}</button>`;
-      return `<tr><td>${state}</td><td>${esc(gpuLabel(b.gpus))}</td><td class="num">${fmtDateTime(s)}</td><td class="num">${fmtDateTime(e)}</td><td class="num">${hours(s, e).toFixed(1)}</td><td>${b.mem_gb ? `<span class="muted small">需 ${b.mem_gb} GB${b.local_insufficient ? "（本地跑不動）" : ""}</span><br>` : ""}${esc(b.purpose)}</td><td>${action}</td></tr>`;
+      return `<tr><td>${state}</td><td>${esc(gpuLabel(b.gpus))}</td><td class="num">${fmtDateTime(s)}</td><td class="num">${fmtDateTime(e)}</td><td class="num">${hours(s, e).toFixed(1)}</td><td>${b.mem_gb ? `<span class="muted small">需 ${b.mem_gb} GB</span><br>` : ""}${esc(b.purpose)}</td><td>${action}</td></tr>`;
     });
     document.getElementById("my-rows").innerHTML = rows.join("") || `<tr><td colspan="7" class="muted">還沒有預約，<a href="/calendar">去預約</a></td></tr>`;
   }

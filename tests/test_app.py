@@ -44,9 +44,8 @@ def admin(app):
     return login(app, "admin1")
 
 
-def book(c, gpus, start, end, purpose="", mem_gb=20, local_insufficient=False):
-    body = {"gpus": gpus, "start": start, "end": end, "purpose": purpose,
-            "mem_gb": mem_gb, "local_insufficient": local_insufficient}
+def book(c, gpus, start, end, purpose="", mem_gb=20):
+    body = {"gpus": gpus, "start": start, "end": end, "purpose": purpose, "mem_gb": mem_gb}
     return c.post("/api/bookings", json=body, headers=H)
 
 
@@ -126,29 +125,21 @@ def test_running_booking_only_end_can_change(alice):
     assert datetime.fromisoformat(r["booking"]["end"]) <= datetime.now(timezone.utc)
 
 
-def test_small_jobs_should_run_locally(alice, admin):
-    # 6 GB local GPU by default
+def test_memory_estimate_required_small_jobs_allowed(alice, admin):
     r = book(alice, [0], at(1), at(2), mem_gb=None)
     assert r.status_code == 409 and "記憶體" in r.json()["detail"]
+    # small jobs only get a reminder in the UI; the booking goes through without a reason
     r = book(alice, [0], at(1), at(2), mem_gb=4)
-    assert r.status_code == 409 and "本地" in r.json()["detail"]
-    # ticking "local can't run it" requires a reason
-    assert book(alice, [0], at(1), at(2), mem_gb=4, local_insufficient=True).status_code == 409
-    r = book(alice, [0], at(1), at(2), purpose="本地太慢，要跑 20 組參數", mem_gb=4, local_insufficient=True)
     assert r.status_code == 200 and r.json()["mem_gb"] == 4
-    # bigger jobs and both GPUs at once are fine
     assert book(alice, [0, 1], at(3), at(5), mem_gb=20).status_code == 200
-    # admins can switch the check off
+    # moving a booking keeps working
+    b = r.json()
+    body = {"gpus": [0], "start": at(6), "end": at(7), "purpose": "", "mem_gb": b["mem_gb"]}
+    assert alice.patch(f"/api/bookings/{b['id']}", json=body, headers=H).status_code == 200
+    # admins can switch the reminder (and the required field) off
     rules = admin.get("/api/admin/rules").json()["rules"] | {"local_gpu_mem_gb": 0}
     assert admin.put("/api/admin/rules", json=rules, headers=H).status_code == 200
-    assert book(alice, [0], at(6), at(7), mem_gb=None).status_code == 200
-
-
-def test_moving_booking_keeps_its_memory_answer(alice):
-    b = book(alice, [0], at(1), at(2), purpose="本地太慢", mem_gb=4, local_insufficient=True).json()
-    body = {"gpus": [0], "start": at(2), "end": at(3), "purpose": b["purpose"],
-            "mem_gb": b["mem_gb"], "local_insufficient": b["local_insufficient"]}
-    assert alice.patch(f"/api/bookings/{b['id']}", json=body, headers=H).status_code == 200
+    assert book(alice, [0], at(8), at(9), mem_gb=None).status_code == 200
 
 
 def test_old_database_gets_new_columns(tmp_path):
@@ -162,7 +153,7 @@ def test_old_database_gets_new_columns(tmp_path):
     con.commit(); con.close()
     Database(Config(data_dir=tmp_path, secret_key="x"))
     cols = {r[1] for r in sqlite3.connect(tmp_path / "usage.db").execute("PRAGMA table_info(bookings)")}
-    assert {"mem_gb", "local_insufficient"} <= cols
+    assert "mem_gb" in cols
 
 
 def test_blackout_blocks_bookings(admin, alice):

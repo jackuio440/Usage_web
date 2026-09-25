@@ -23,7 +23,6 @@ class BookingIn(BaseModel):
     end: AwareDatetime
     purpose: str = Field("", max_length=500)
     mem_gb: float | None = Field(None, gt=0, le=1024)
-    local_insufficient: bool = False
 
 
 def parse_query_dt(value: str, st: AppState) -> datetime:
@@ -105,8 +104,6 @@ def _validate(st: AppState, s, user: User, body: BookingIn, existing: Booking | 
             end=to_db(body.end),
             existing=existing,
             mem_gb=body.mem_gb,
-            local_insufficient=body.local_insufficient,
-            purpose=body.purpose,
         )
     except bk.BookingError as e:
         raise HTTPException(409, str(e)) from e
@@ -131,7 +128,6 @@ def create_booking(body: BookingIn, user: User = Depends(current_user), st: AppS
             end=to_db(body.end),
             purpose=body.purpose.strip(),
             mem_gb=body.mem_gb,
-            local_insufficient=body.local_insufficient,
         )
         s.add(b)
         s.flush()
@@ -155,7 +151,7 @@ def update_booking(booking_id: int, body: BookingIn, user: User = Depends(curren
         b = _get_owned(s, booking_id, user)
         _validate(st, s, user, body, existing=b)
         b.gpus, b.start, b.end, b.purpose = _gpus_str(body.gpus), to_db(body.start), to_db(body.end), body.purpose.strip()
-        b.mem_gb, b.local_insufficient = body.mem_gb, body.local_insufficient
+        b.mem_gb = body.mem_gb
         st.db.audit(s, user.username, "update_booking", f"#{b.id} ({b.username}) GPU {b.gpus} {_span(st, b.start, b.end)}")
         s.commit()
         return b.to_dict()

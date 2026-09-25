@@ -166,7 +166,7 @@
   async function moved(info) {
     const b = info.event.extendedProps.booking;
     try {
-      await api("PATCH", `/api/bookings/${b.id}`, { gpus: b.gpus, start: info.event.start.toISOString(), end: info.event.end.toISOString(), purpose: b.purpose, mem_gb: b.mem_gb, local_insufficient: b.local_insufficient });
+      await api("PATCH", `/api/bookings/${b.id}`, { gpus: b.gpus, start: info.event.start.toISOString(), end: info.event.end.toISOString(), purpose: b.purpose, mem_gb: b.mem_gb });
       toast("已更新預約");
       reloadAll();
     } catch (e) { info.revert(); toast(e.message, true); }
@@ -203,7 +203,6 @@
     owner: document.getElementById("dlg-owner"),
     save: document.getElementById("dlg-save"),
     mem: document.getElementById("f-mem"),
-    local: document.getElementById("f-local"),
     localHint: document.getElementById("local-hint"),
   };
   const localLimit = () => (me && me.rules.local_gpu_mem_gb) || 0;
@@ -236,7 +235,6 @@
     f.purpose.value = purpose;
     f.mem.value = booking && booking.mem_gb != null ? booking.mem_gb : "";
     f.mem.required = localLimit() > 0 && !APP.isAdmin;
-    f.local.checked = !!(booking && booking.local_insufficient);
     updateLocalHint();
     f.error.hidden = true;
     f.del.hidden = !booking;
@@ -284,7 +282,6 @@
       end: e.toISOString(),
       purpose: f.purpose.value,
       mem_gb: f.mem.value ? Number(f.mem.value) : null,
-      local_insufficient: !f.localHint.hidden && f.local.checked,
     };
     f.save.disabled = true;
     try {
