@@ -199,3 +199,11 @@ If the server's SSH does not run on port 22, add `-p`, e.g. `ssh -p 2222 -N -L 8
 - Nobody can book a GPU that is already booked for that time. There are limits per booking and per week; see **My bookings**.
 - Click your own booking to change it, cancel it, or end it early.
 - **Live status** shows what is running on each GPU. Processes running without a booking are marked yellow. Processes on a GPU someone else booked are marked red.
+
+---
+
+## 授權 / License
+
+本專案以 [MIT License](LICENSE) 授權。內含的 FullCalendar（`app/static/vendor/fullcalendar/`）同樣是 MIT 授權，原授權檔保留在該資料夾。
+
+This project is licensed under the [MIT License](LICENSE). The bundled FullCalendar (`app/static/vendor/fullcalendar/`) is also MIT-licensed; its license file is kept in that folder.
