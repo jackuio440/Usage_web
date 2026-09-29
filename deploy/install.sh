@@ -59,12 +59,35 @@ fi
 install -m 755 deploy/backup.sh /etc/cron.daily/usage-web-backup
 systemctl daemon-reload
 systemctl enable usage-web >/dev/null
-systemctl restart usage-web
+systemctl stop usage-web 2>/dev/null || true
 
+conf_value() {  # first `key = value` in the config file, quotes stripped
+  grep -E "^\s*$1\s*=" "$CONF_DIR/config.toml" | head -1 | sed -E 's/^[^=]*=\s*//; s/\s*#.*$//; s/"//g'
+}
+HOST=$(conf_value host); HOST=${HOST:-127.0.0.1}
+PORT=$(conf_value port | tr -dc '0-9'); PORT=${PORT:-8080}
+
+echo "==> 檢查 port $PORT 是否被其他服務佔用"
+if command -v ss >/dev/null && [ -n "$(ss -ltnH "sport = :$PORT")" ]; then
+  echo "!! port $PORT 已經被下面的程式佔用，網站沒有啟動："
+  ss -ltnpH "sport = :$PORT" | sed -E 's/.*users:\(\("([^"]+)".*/   \1/' | sort -u
+  echo "   請在 $CONF_DIR/config.toml 換一個沒被佔用、防火牆有開放的 port，"
+  echo "   或停掉佔用的服務，再重新執行 sudo deploy/install.sh"
+  exit 1
+fi
+
+systemctl start usage-web
 sleep 2
-PORT=$(grep -E '^\s*port\s*=' "$CONF_DIR/config.toml" | head -1 | tr -dc '0-9')
-if curl -fs "http://127.0.0.1:${PORT:-8080}/healthz" >/dev/null; then
-  echo "==> 完成！網站在 port ${PORT:-8080} 執行中"
-else
+if ! curl -fs "http://127.0.0.1:$PORT/healthz" >/dev/null; then
   echo "!! 服務沒有正常回應，請看：journalctl -u usage-web -n 50"
+  exit 1
+fi
+
+echo "==> 完成！網站在 port $PORT 執行中"
+if [ "$HOST" = "127.0.0.1" ] || [ "$HOST" = "localhost" ]; then
+  echo "    目前只接受本機連線，大家用 SSH 通道連：ssh -p <SSH port> -N -L 8080:127.0.0.1:$PORT 帳號@伺服器IP"
+  echo "    然後打開 http://localhost:8080"
+else
+  IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+  if [ "$PORT" = 80 ]; then echo "    網址：http://${IP:-伺服器IP}"; else echo "    網址：http://${IP:-伺服器IP}:$PORT"; fi
 fi

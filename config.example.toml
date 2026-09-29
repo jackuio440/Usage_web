@@ -3,8 +3,9 @@
 
 [server]
 # 127.0.0.1 = 只接受本機連線，大家透過 SSH 通道連進來（不用另外申請 port）
-# 0.0.0.0   = 接受區網直接連線（需要機房開放下面的 port）
+# 0.0.0.0   = 接受直接連線（需要防火牆開放下面的 port）
 host = "127.0.0.1"
+# 可以用 80（網址不用加 port；服務已有綁定 80 的權限）或其他已開放的 port
 port = 8080
 data_dir = "/var/lib/usage-web"       # 資料庫與 session 金鑰存放位置
 timezone = "Asia/Taipei"

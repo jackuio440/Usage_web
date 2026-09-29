@@ -44,27 +44,36 @@ ssh -N -L 8080:127.0.0.1:8080 你的帳號@伺服器位址
 
 保持這個視窗開著，然後瀏覽器打開 **http://localhost:8080**。
 
+> **伺服器的 SSH 不是 22 port 的話**，要加上 `-p`，例如 SSH 在 2222：`ssh -p 2222 -N -L 8080:127.0.0.1:8080 你的帳號@伺服器位址`。下面的 `~/.ssh/config` 則是加一行 `Port 2222`。
+
 更方便的做法：
 - **寫進 `~/.ssh/config`**，之後每次 `ssh gpu` 就自動帶上網站：
   ```
   Host gpu
       HostName 伺服器位址
       User 你的帳號
+      # Port 2222            ← SSH 不是 22 時才需要
       LocalForward 8080 127.0.0.1:8080
   ```
 - **用 VS Code Remote-SSH 的人**：連上伺服器後，在下方「連接埠 (Ports)」面板按「轉送連接埠」輸入 `8080`，就能直接開網頁。
 - 如果 SSH 要先經過跳板機：`ssh -N -J 帳號@跳板機 -L 8080:127.0.0.1:8080 帳號@伺服器`
 
-### 方案 B：申請一個 port，讓區網直接連
+### 方案 B：開一個 port，讓大家直接用瀏覽器連
 
-1. 向機房申請開放一個 TCP port（例如 8080），**只需要一個**，網頁、API、靜態檔案都走同一個 port
-2. 修改 `/etc/usage-web/config.toml`：
+1. 確認防火牆有開放一個 TCP port，**只需要一個**，網頁、API、靜態檔案都走同一個 port
+2. 在伺服器上看看這個 port 有沒有被別的服務佔用（沒有輸出 = 空著），例如檢查 80：
+   ```bash
+   sudo ss -ltnp | grep -E ':80\b'
+   ```
+   - **80 空著就用 80**：網址不用加 port（`http://伺服器IP`）。服務已經有綁定 80 的權限，不需要用 root 執行
+   - 80 被佔用（例如已經有 nginx / Apache）就換一個防火牆有開的 port
+3. 修改 `/etc/usage-web/config.toml`：
    ```toml
    host = "0.0.0.0"
-   port = 8080        # 改成申請到的 port
+   port = 80          # 改成要用的 port
    ```
-3. `sudo systemctl restart usage-web`
-4. 大家用 `http://伺服器IP:8080` 連線
+4. `sudo deploy/install.sh`（或 `sudo systemctl restart usage-web`）。install.sh 會先檢查 port 有沒有被佔用；被佔用會印出是哪個程式，不會啟動
+5. 大家用 `http://伺服器IP`（port 80）或 `http://伺服器IP:port` 連線
 
 > 方案 B 的連線沒有加密（http）。只在內網 / VPN 使用還可以接受；如果要對外開放，請在前面加 HTTPS 反向代理（nginx / Caddy），並把 `cookie_secure = true`。
 
@@ -170,11 +179,14 @@ ssh -N -L 8080:127.0.0.1:8080 your-username@server-address
 
 Keep that window open and browse to **http://localhost:8080**.
 
+If the server's SSH does not run on port 22, add `-p`, e.g. `ssh -p 2222 -N -L 8080:127.0.0.1:8080 your-username@server-address` (and `Port 2222` in `~/.ssh/config`).
+
 - To have the tunnel whenever you SSH in, add this to `~/.ssh/config`, then just run `ssh gpu`:
   ```
   Host gpu
       HostName server-address
       User your-username
+      # Port 2222            <- only if SSH is not on port 22
       LocalForward 8080 127.0.0.1:8080
   ```
 - **VS Code Remote-SSH:** after connecting, open the **Ports** panel, click **Forward a Port** and enter `8080`.
